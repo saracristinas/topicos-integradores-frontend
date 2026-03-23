@@ -8,7 +8,7 @@ export const api = {
     body: JSON.stringify(credentials)
   }),
   
-  getUsuarios: () => fetch(`${BASE_URL}/users`),
+  getUsuarios: (page = 0, size = 10) => fetch(`${BASE_URL}/users?page=${page}&size=${size}`),
   
   // Usando 'name' no payload de envio
   cadastro: (userData) => fetch(`${BASE_URL}/users`, {

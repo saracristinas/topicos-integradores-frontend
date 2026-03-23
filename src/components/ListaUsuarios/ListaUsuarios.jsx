@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../Api'; 
+import Pagination from '../Pagination/Pagination';
 import styles from './ListaUsuarios.module.css';
 
 export default function ListaUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [paginationInfo, setPaginationInfo] = useState({
+    totalPages: 0,
+    totalElements: 0,
+    pageSize: 10,
+    currentPageNumber: 0
+  });
   
   // Estados para o Modal de Adição (Controle de visibilidade e dados do novo usuário)
   const [showAddModal, setShowAddModal] = useState(false);
@@ -16,10 +24,10 @@ export default function ListaUsuarios() {
    * para que você possamos mostrar a interface funcionando mesmo sem o servidor ligado.
    */
   // Função para carregar usuários da API (Ajustada para Paginação/Content)
-  const carregarUsuarios = async () => {
+  const carregarUsuarios = async (page = 0) => {
     setLoading(true);
     try {
-      const response = await api.getUsuarios();
+      const response = await api.getUsuarios(page, 10);
       const data = await response.json();
 
       /**
@@ -32,8 +40,21 @@ export default function ListaUsuarios() {
       
       setUsuarios(listaFinal);
 
+      // Extrai informações de paginação do backend
+      const total = data.totalElements || 0;
+      const pages = data.totalPages || 1;
+      const size = data.size || 10;
+      
+      setPaginationInfo({
+        totalPages: pages,
+        totalElements: total,
+        pageSize: size,
+        currentPageNumber: page
+      });
+
       // Log para debug no console do navegador (F12) para você ver o que chegou
       console.log("Dados processados para a tabela:", listaFinal);
+      console.log("Paginação:", { pages, total, size, page });
 
     } catch (error) {
       console.error("Erro ao conectar com a VM:", error);
@@ -42,14 +63,20 @@ export default function ListaUsuarios() {
         { id: 1, name: 'Admin (Mock)', email: 'admin@projeto.com' },
         { id: 2, name: 'Usuário (Mock)', email: 'user@projeto.com' },
       ]);
+      setPaginationInfo({
+        totalPages: 1,
+        totalElements: 2,
+        pageSize: 10,
+        currentPageNumber: 0
+      });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    carregarUsuarios();
-  }, []);
+    carregarUsuarios(currentPage);
+  }, [currentPage]);
 
   /**
    * 2. GESTÃO DE INFRAESTRUTURA:
@@ -64,7 +91,8 @@ export default function ListaUsuarios() {
       if (response.ok) {
         alert("Utilizador adicionado com sucesso à base de dados!");
         setShowAddModal(false);
-        carregarUsuarios(); // Recarrega a lista para mostrar o novo usuário
+        setNewUserData({ nome: '', email: '', password: '' });
+        setCurrentPage(0); // Volta para primeira página para ver o novo usuário
       }
     } catch (error) {
       alert("Erro ao conectar com a VM para cadastrar.");
@@ -90,7 +118,7 @@ export default function ListaUsuarios() {
       try {
         await api.restoreBanco();
         alert("Restauração concluída com sucesso.");
-        carregarUsuarios();
+        setCurrentPage(0); // Volta para primeira página
       } catch (error) {
         alert("Erro ao realizar restore.");
       }
@@ -165,6 +193,15 @@ export default function ListaUsuarios() {
           </tbody>
         </table>
       </div>
+
+      {/* Componente de Paginação */}
+      <Pagination 
+        currentPage={currentPage}
+        totalPages={paginationInfo.totalPages}
+        totalElements={paginationInfo.totalElements}
+        pageSize={paginationInfo.pageSize}
+        onPageChange={setCurrentPage}
+      />
 
       {/* MODAL DE ADIÇÃO: Interface limpa para manipulação de dados via POST */}
       {showAddModal && (
