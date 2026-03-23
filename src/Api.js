@@ -21,6 +21,22 @@ export const api = {
     })
   }),
   
+  atualizarUsuario: (id, userData) => {
+    const payload = {
+      name: userData.nome,
+      email: userData.email
+    };
+    // Só envia password se foi preenchido
+    if (userData.password && userData.password.trim()) {
+      payload.password = userData.password;
+    }
+    return fetch(`${BASE_URL}/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  },
+  
   excluirUsuario: (id) => fetch(`${BASE_URL}/users/${id}`, { method: 'DELETE' }),
 
   // Endpoints de Infraestrutura (Requisitos de Projeto)

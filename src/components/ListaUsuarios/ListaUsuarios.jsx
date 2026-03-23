@@ -17,6 +17,11 @@ export default function ListaUsuarios() {
   // Estados para o Modal de Adição (Controle de visibilidade e dados do novo usuário)
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUserData, setNewUserData] = useState({ nome: '', email: '', password: '' });
+  
+  // Estados para o Modal de Edição
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editUserData, setEditUserData] = useState({ nome: '', email: '', password: '' });
 
   /**
    * 1. BUSCA DE DADOS (GET):
@@ -92,10 +97,47 @@ export default function ListaUsuarios() {
         alert("Utilizador adicionado com sucesso à base de dados!");
         setShowAddModal(false);
         setNewUserData({ nome: '', email: '', password: '' });
-        setCurrentPage(0); // Volta para primeira página para ver o novo usuário
+        await carregarUsuarios(currentPage);
       }
     } catch (error) {
       alert("Erro ao conectar com a VM para cadastrar.");
+    }
+  };
+
+  // Abre modal de edição com dados do usuário selecionado
+  const handleEditClick = (user) => {
+    setEditingUser(user);
+    setEditUserData({ nome: user.name || user.nome, email: user.email, password: '' });
+    setShowEditModal(true);
+  };
+
+  // Salva as alterações do usuário
+  const handleUpdateUsuario = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      const payload = {
+        nome: editUserData.nome,
+        email: editUserData.email
+      };
+
+      // Senha é opcional
+      if (editUserData.password.trim() !== '') {
+        payload.password = editUserData.password;
+      }
+
+      const response = await api.atualizarUsuario(editingUser.id, payload);
+
+      if (response.ok) {
+        alert("Utilizador atualizado com sucesso!");
+        setShowEditModal(false);
+        setEditingUser(null);
+        setEditUserData({ nome: '', email: '', password: '' });
+        await carregarUsuarios(currentPage);
+      }
+    } catch (error) {
+      alert("Erro ao atualizar usuário na VM.");
     }
   };
 
@@ -118,7 +160,7 @@ export default function ListaUsuarios() {
       try {
         await api.restoreBanco();
         alert("Restauração concluída com sucesso.");
-        setCurrentPage(0); // Volta para primeira página
+        await carregarUsuarios(currentPage);
       } catch (error) {
         alert("Erro ao realizar restore.");
       }
@@ -131,7 +173,7 @@ export default function ListaUsuarios() {
       try {
         await api.excluirUsuario(id);
         alert("Usuário removido no servidor.");
-        carregarUsuarios();
+        await carregarUsuarios(currentPage);
       } catch (error) {
         alert("Erro ao conectar com a VM para excluir.");
       }
@@ -175,7 +217,7 @@ export default function ListaUsuarios() {
                   <td>{user.name || user.nome}</td>
                   <td>{user.email}</td>
                   <td>
-                    <button className={styles.btnEdit}>Alterar</button>
+                    <button className={styles.btnEdit} onClick={() => handleEditClick(user)}>Alterar</button>
                     <button 
                       className={styles.btnDelete}
                       onClick={() => handleExcluir(user.id)}
@@ -224,6 +266,48 @@ export default function ListaUsuarios() {
               <div className={styles.modalActions}>
                 <button type="submit" className={styles.btnAdd}>Cadastrar</button>
                 <button type="button" className={styles.btnCancel} onClick={() => setShowAddModal(false)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EDIÇÃO: Interface para atualizar dados do usuário */}
+      {showEditModal && editingUser && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <h2>Editar Utilizador: {editingUser.name || editingUser.nome}</h2>
+            <form onSubmit={handleUpdateUsuario}>
+              <div className={styles.field}>
+                <label>Nome</label>
+                <input 
+                  type="text" 
+                  required 
+                  value={editUserData.nome}
+                  onChange={e => setEditUserData({...editUserData, nome: e.target.value})} 
+                />
+              </div>
+              <div className={styles.field}>
+                <label>E-mail</label>
+                <input 
+                  type="email" 
+                  required 
+                  value={editUserData.email}
+                  onChange={e => setEditUserData({...editUserData, email: e.target.value})} 
+                />
+              </div>
+              <div className={styles.field}>
+                <label>Senha (deixe em branco para manter a atual)</label>
+                <input 
+                  type="password" 
+                  value={editUserData.password}
+                  onChange={e => setEditUserData({...editUserData, password: e.target.value})} 
+                  placeholder="Nova senha (opcional)"
+                />
+              </div>
+              <div className={styles.modalActions}>
+                <button type="submit" className={styles.btnAdd}>Guardar Alterações</button>
+                <button type="button" className={styles.btnCancel} onClick={() => setShowEditModal(false)}>Cancelar</button>
               </div>
             </form>
           </div>
